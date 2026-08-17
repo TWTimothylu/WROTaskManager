@@ -65,16 +65,19 @@ export default function GlobalTimerPanel({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
-              width: '36px',
-              height: '36px',
-              background: 'linear-gradient(135deg, #ff5500, #ff0033)',
+              width: '38px',
+              height: '38px',
+              borderRadius: '8px',
+              overflow: 'hidden',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 0 16px rgba(255, 85, 0, 0.6)',
-              clipPath: 'polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px))'
+              background: 'rgba(255, 85, 0, 0.1)',
+              border: '1px solid rgba(255, 85, 0, 0.6)',
+              boxShadow: '0 0 14px rgba(255, 85, 0, 0.35)',
+              flexShrink: 0
             }}>
-              <Award size={20} color="#fff" />
+              <img src="./icon.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
             <div>
               <h1 style={{ fontFamily: 'var(--font-family-display)', fontSize: '1.1rem', fontWeight: 900, letterSpacing: '1.2px', color: 'var(--color-nerv-amber)', textTransform: 'uppercase' }}>

@@ -43,6 +43,7 @@ function PipContent({
         gap: '8px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img src="./icon.png" alt="WRO" style={{ width: '18px', height: '18px', objectFit: 'contain', borderRadius: '3px' }} />
           <span style={{ fontSize: '0.72rem', color: '#ffaa00', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'Orbitron, sans-serif', fontWeight: 800 }}>
             [ WRO HUD ]
           </span>
