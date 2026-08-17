@@ -1,16 +1,19 @@
 {
-  "short_name": "WRO 戰術管理系統",
+  "short_name": "WRO 戰術系統",
   "name": "WRO 戰術管理系統",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "favicon.svg",
       "type": "image/svg+xml",
-      "sizes": "192x192 512x512"
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": "/",
-  "background_color": "#0b0f19",
-  "theme_color": "#0b0f19",
+  "start_url": "./index.html",
+  "scope": "./",
+  "background_color": "#040303",
+  "theme_color": "#040303",
   "display": "standalone",
   "orientation": "any"
 }
+
