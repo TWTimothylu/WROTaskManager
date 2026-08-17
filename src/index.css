@@ -1,0 +1,247 @@
+/* WRO Task Manager - NERV HUD / MAGI System Design System */
+@font-face {
+  font-family: 'DS-Digital';
+  src: url('/font/DS-DIGIT.TTF') format('truetype'),
+       url('../font/DS-DIGIT.TTF') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Zen Old Mincho';
+  src: url('/font/Zen_Old_Mincho/ZenOldMincho-Bold.ttf') format('truetype'),
+       url('../font/Zen_Old_Mincho/ZenOldMincho-Bold.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg-primary: #040303;
+  --bg-secondary: #0c0804;
+  --glass-bg: rgba(18, 12, 5, 0.88);
+  --glass-bg-hover: rgba(40, 22, 8, 0.9);
+  --glass-bg-active: rgba(60, 30, 10, 0.95);
+  --glass-border: rgba(255, 102, 0, 0.45);
+  --glass-border-bright: rgba(255, 170, 0, 0.85);
+  --glass-blur: blur(12px);
+
+  --color-nerv-orange: #ff5500;
+  --color-nerv-amber: #ffaa00;
+  --color-nerv-red: #ff0033;
+  --color-nerv-green: #00ff66;
+  --color-nerv-cyan: #00e5ff;
+  --color-nerv-purple: #aa00ff;
+
+  --color-accent-cyan: #ffaa00;
+  --color-accent-blue: #ff6600;
+  --color-accent-emerald: #00ff66;
+  --color-accent-rose: #ff0033;
+  --color-accent-amber: #ffaa00;
+  --color-accent-violet: #aa00ff;
+
+  --text-main: #fff3e6;
+  --text-muted: #e6a366;
+  --text-dim: #996033;
+
+  --font-family-sans: 'Chakra Petch', 'Zen Old Mincho', 'Noto Sans TC', system-ui, sans-serif;
+  --font-family-display: 'Orbitron', 'Zen Old Mincho', 'Chakra Petch', sans-serif;
+  --font-family-mono: 'Share Tech Mono', 'Zen Old Mincho', monospace;
+  --font-family-digital: 'DS-Digital', 'Share Tech Mono', 'Zen Old Mincho', monospace;
+
+  --glow-cyan: 0 0 20px rgba(255, 170, 0, 0.45), inset 0 0 10px rgba(255, 170, 0, 0.2);
+  --glow-rose: 0 0 25px rgba(255, 0, 51, 0.6), inset 0 0 15px rgba(255, 0, 51, 0.3);
+  --glow-emerald: 0 0 20px rgba(0, 255, 102, 0.45), inset 0 0 10px rgba(0, 255, 102, 0.2);
+
+  --timeline-left-width: 330px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: var(--font-family-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* NERV Grid Scanline Background */
+#root {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(255, 102, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 102, 0, 0.05) 1px, transparent 1px),
+    radial-gradient(circle at 50% 50%, rgba(255, 85, 0, 0.12) 0%, #040303 90%);
+  background-size: 24px 24px, 24px 24px, 100% 100%;
+}
+
+/* NERV Scanline Effect Overlay */
+#root::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.6;
+}
+
+/* Scrollbars - NERV Orange Glow */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(12, 8, 4, 0.8);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-nerv-orange);
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(255, 85, 0, 0.6);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-nerv-amber);
+}
+
+/* Animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(255, 170, 0, 0.4), inset 0 0 8px rgba(255, 170, 0, 0.2);
+    border-color: var(--color-nerv-amber);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 170, 0, 0.8), inset 0 0 16px rgba(255, 170, 0, 0.4);
+    border-color: #ffffff;
+  }
+}
+
+@keyframes flashRedBorder {
+  0%, 100% {
+    border-color: var(--color-nerv-red);
+    box-shadow: 0 0 30px rgba(255, 0, 51, 0.8), inset 0 0 15px rgba(255, 0, 51, 0.4);
+    background: rgba(60, 0, 10, 0.85);
+  }
+  50% {
+    border-color: rgba(255, 0, 51, 0.4);
+    box-shadow: 0 0 10px rgba(255, 0, 51, 0.2), inset 0 0 5px rgba(255, 0, 51, 0.1);
+    background: rgba(30, 0, 5, 0.65);
+  }
+}
+
+/* NERV UI Panels & Cards with Chamfered Corners */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 0 20px rgba(255, 85, 0, 0.15);
+  position: relative;
+}
+
+.glass-card {
+  background: rgba(18, 12, 5, 0.85);
+  border: 1px solid var(--glass-border);
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+.glass-card:hover {
+  border-color: var(--glass-border-bright);
+  box-shadow: 0 0 15px rgba(255, 102, 0, 0.3);
+}
+
+/* NERV Buttons */
+.btn-glass {
+  background: rgba(30, 18, 8, 0.8);
+  border: 1px solid var(--glass-border);
+  color: var(--color-nerv-amber);
+  padding: 8px 16px;
+  font-family: var(--font-family-display);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+.btn-glass:hover {
+  background: rgba(255, 102, 0, 0.25);
+  border-color: var(--color-nerv-amber);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(255, 102, 0, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-glass:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: rgba(255, 85, 0, 0.25);
+  border: 1px solid var(--color-nerv-orange);
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(255, 85, 0, 0.3);
+}
+
+.btn-primary:hover {
+  background: rgba(255, 85, 0, 0.5);
+  border-color: #ffffff;
+  box-shadow: 0 0 25px rgba(255, 85, 0, 0.6);
+}
+
+.btn-success {
+  background: rgba(0, 255, 102, 0.15);
+  border: 1px solid var(--color-nerv-green);
+  color: var(--color-nerv-green);
+}
+
+.btn-success:hover {
+  background: rgba(0, 255, 102, 0.35);
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.5);
+}
+
+.btn-danger {
+  background: rgba(255, 0, 51, 0.2);
+  border: 1px solid var(--color-nerv-red);
+  color: var(--color-nerv-red);
+}
+
+.btn-danger:hover {
+  background: rgba(255, 0, 51, 0.45);
+  color: #ffffff;
+  box-shadow: 0 0 18px rgba(255, 0, 51, 0.6);
+}
+
+/* Typography styles */
+.display-time {
+  font-family: var(--font-family-digital);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
