@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 function PipContent({
@@ -10,6 +10,23 @@ function PipContent({
   isRunning,
   onToggleRunning
 }) {
+  const containerRef = useRef(null);
+  const [size, setSize] = useState({ width: 480, height: 280 });
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setSize({ width, height });
+        }
+      }
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
   const formatTime = (sec) => {
     const isNeg = sec < 0;
     const abs = Math.abs(sec);
@@ -19,32 +36,65 @@ function PipContent({
     return `${isNeg ? '-' : ''}${pad(m)}:${pad(s)}`;
   };
 
+  // Base reference window dimensions: 480 x 270
+  const scaleW = size.width / 480;
+  const scaleH = size.height / 270;
+  const scale = Math.min(scaleW, scaleH);
+  const effectiveScale = Math.max(0.4, Math.min(scale, 2.5));
+
+  // Sizing helper based on scaling factor
+  const s = (base, min = 0) => Math.max(min, Math.round(base * effectiveScale));
+  const isTight = size.height < 210 || size.width < 340;
+
   return (
-    <div style={{
-      padding: '14px',
-      color: '#fff3e6',
-      fontFamily: "'Chakra Petch', 'Zen Old Mincho', 'Noto Sans TC', sans-serif",
-      background: '#040303',
-      minHeight: '100vh',
-      boxSizing: 'border-box',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-      gap: '10px'
-    }}>
+    <div
+      ref={containerRef}
+      style={{
+        padding: `${s(10, 4)}px`,
+        color: '#fff3e6',
+        fontFamily: "'Chakra Petch', 'Zen Old Mincho', 'Noto Sans TC', sans-serif",
+        background: '#040303',
+        width: '100%',
+        height: '100%',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        gap: `${s(6, 2)}px`,
+        overflow: 'hidden'
+      }}
+    >
       {/* Header with Play/Pause and Global Timer */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         borderBottom: '1px solid rgba(255,102,0,0.35)',
-        paddingBottom: '8px',
-        flexWrap: 'wrap',
-        gap: '8px'
+        paddingBottom: `${s(6, 2)}px`,
+        gap: `${s(6, 2)}px`,
+        flexShrink: 0
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <img src="./icon.png" alt="WRO" style={{ width: '18px', height: '18px', objectFit: 'contain', borderRadius: '3px' }} />
-          <span style={{ fontSize: '0.72rem', color: '#ffaa00', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'Orbitron, sans-serif', fontWeight: 800 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: `${s(6, 2)}px`, minWidth: 0 }}>
+          <img
+            src="./icon.png"
+            alt="WRO"
+            style={{
+              width: `${s(18, 12)}px`,
+              height: `${s(18, 12)}px`,
+              objectFit: 'contain',
+              borderRadius: '3px',
+              flexShrink: 0
+            }}
+          />
+          <span style={{
+            fontSize: `${s(12, 8)}px`,
+            color: '#ffaa00',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            fontFamily: 'Orbitron, sans-serif',
+            fontWeight: 800,
+            whiteSpace: 'nowrap'
+          }}>
             [ WRO HUD ]
           </span>
           <button
@@ -53,25 +103,32 @@ function PipContent({
               background: isRunning ? 'rgba(255, 0, 51, 0.25)' : 'rgba(255, 170, 0, 0.25)',
               border: isRunning ? '1px solid #ff0033' : '1px solid #ffaa00',
               color: isRunning ? '#ff6677' : '#ffaa00',
-              padding: '3px 8px',
-              fontSize: '0.72rem',
+              padding: `${s(3, 1)}px ${s(8, 4)}px`,
+              fontSize: `${s(11, 8)}px`,
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'Orbitron, sans-serif',
-              letterSpacing: '0.5px'
+              letterSpacing: '0.5px',
+              whiteSpace: 'nowrap'
             }}
           >
             {isRunning ? '⏸ 暫停' : '▶ 開始'}
           </button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '0.78rem', color: '#ffaa00', fontWeight: 700, letterSpacing: '1px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: `${s(6, 2)}px`, flexShrink: 0 }}>
+          <span style={{
+            fontSize: `${s(11, 7)}px`,
+            color: '#ffaa00',
+            fontWeight: 700,
+            letterSpacing: '1px',
+            whiteSpace: 'nowrap'
+          }}>
             總剩餘
           </span>
           <span className="display-time" style={{
             fontFamily: 'var(--font-family-digital), DS-Digital, Share Tech Mono, monospace',
-            fontSize: '2rem',
+            fontSize: `${s(30, 15)}px`,
             fontWeight: 700,
             letterSpacing: '1.5px',
             color: globalSeconds < 300 ? '#ff0033' : '#ffaa00',
@@ -86,13 +143,13 @@ function PipContent({
       {/* Active Task Info */}
       <div style={{
         flex: 1,
-        overflowX: 'auto',
-        overflowY: 'auto',
+        minHeight: 0,
+        overflowX: activeNodes.length > 1 ? 'auto' : 'hidden',
+        overflowY: 'hidden',
         display: 'flex',
         flexDirection: 'row',
-        gap: '10px',
-        alignItems: 'stretch',
-        paddingBottom: '4px'
+        gap: `${s(8, 3)}px`,
+        alignItems: 'stretch'
       }}>
         {activeNodes.length > 0 ? (
           activeNodes.map(node => (
@@ -100,30 +157,55 @@ function PipContent({
               background: 'rgba(20, 10, 5, 0.95)',
               border: '1px solid #ff5500',
               boxShadow: '0 0 15px rgba(255, 85, 0, 0.3)',
-              padding: '12px',
-              flex: activeNodes.length > 1 ? '0 0 280px' : '1',
+              padding: `${s(10, 4)}px`,
+              flex: activeNodes.length > 1 ? `0 0 ${s(260, 140)}px` : '1',
               display: 'flex',
               flexDirection: 'column',
-              justify: 'space-between',
+              justifyContent: 'space-between',
+              minHeight: 0,
               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.68rem', color: '#ffaa00', fontWeight: 700, marginBottom: '4px', fontFamily: 'Orbitron, sans-serif', letterSpacing: '1px' }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: `${s(8, 4)}px`,
+                flex: 1,
+                minHeight: 0
+              }}>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{
+                    fontSize: `${s(10, 7)}px`,
+                    color: '#ffaa00',
+                    fontWeight: 700,
+                    marginBottom: `${s(2, 1)}px`,
+                    fontFamily: 'Orbitron, sans-serif',
+                    letterSpacing: '1px'
+                  }}>
                     [ 當前執行任務 ]
                   </div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff' }}>
+                  <div style={{
+                    fontSize: `${s(15, 9)}px`,
+                    fontWeight: 800,
+                    marginBottom: `${s(3, 1)}px`,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    color: '#fff'
+                  }}>
                     {node.name}
                   </div>
-                  {node.description && (
+                  {node.description && !isTight && (
                     <div style={{
-                      fontSize: '0.75rem',
+                      fontSize: `${s(11, 7)}px`,
                       color: '#d99b6c',
-                      marginBottom: '4px',
                       borderLeft: '2px solid #ff5500',
-                      paddingLeft: '6px',
+                      paddingLeft: `${s(6, 2)}px`,
                       whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word'
+                      wordBreak: 'break-word',
+                      maxHeight: `${s(36, 14)}px`,
+                      overflowY: 'auto',
+                      lineHeight: 1.2
                     }}>
                       {node.description}
                     </div>
@@ -131,12 +213,26 @@ function PipContent({
                 </div>
 
                 {/* Right side: Task Timer */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', flexShrink: 0, paddingLeft: '8px' }}>
-                  <span style={{ fontSize: '0.8rem', color: '#ffaa00', fontWeight: 700, letterSpacing: '1px', marginBottom: '2px' }}>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-end',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  paddingLeft: `${s(6, 2)}px`
+                }}>
+                  <span style={{
+                    fontSize: `${s(11, 7)}px`,
+                    color: '#ffaa00',
+                    fontWeight: 700,
+                    letterSpacing: '1px',
+                    marginBottom: `${s(2, 1)}px`,
+                    whiteSpace: 'nowrap'
+                  }}>
                     任務剩餘時間
                   </span>
                   <div className="display-time" style={{
-                    fontSize: '2.4rem',
+                    fontSize: `${s(34, 16)}px`,
                     fontFamily: 'var(--font-family-digital), DS-Digital, Share Tech Mono, monospace',
                     fontWeight: 700,
                     letterSpacing: '1.5px',
@@ -149,19 +245,25 @@ function PipContent({
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+              <div style={{
+                display: 'flex',
+                gap: `${s(6, 3)}px`,
+                marginTop: `${s(6, 2)}px`,
+                flexShrink: 0
+              }}>
                 <button
                   style={{
                     flex: 1,
                     background: 'rgba(0, 255, 102, 0.2)',
                     border: '1px solid #00ff66',
                     color: '#00ff66',
-                    padding: '8px',
+                    padding: `${s(6, 2)}px ${s(6, 2)}px`,
                     fontWeight: 700,
                     cursor: 'pointer',
-                    fontSize: '0.78rem',
+                    fontSize: `${s(11, 7)}px`,
                     fontFamily: 'Orbitron, sans-serif',
-                    letterSpacing: '1px'
+                    letterSpacing: '0.5px',
+                    whiteSpace: 'nowrap'
                   }}
                   onClick={() => {
                     const remSec = taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60;
@@ -176,12 +278,13 @@ function PipContent({
                     background: 'rgba(255, 0, 51, 0.2)',
                     border: '1px solid #ff0033',
                     color: '#ff0033',
-                    padding: '8px',
+                    padding: `${s(6, 2)}px ${s(6, 2)}px`,
                     fontWeight: 700,
                     cursor: 'pointer',
-                    fontSize: '0.78rem',
+                    fontSize: `${s(11, 7)}px`,
                     fontFamily: 'Orbitron, sans-serif',
-                    letterSpacing: '1px'
+                    letterSpacing: '0.5px',
+                    whiteSpace: 'nowrap'
                   }}
                   onClick={() => {
                     const remSec = taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60;
@@ -194,7 +297,17 @@ function PipContent({
             </div>
           ))
         ) : (
-          <div style={{ flex: 1, padding: '20px', textAlign: 'center', color: '#805633', fontSize: '0.85rem', fontFamily: 'Share Tech Mono, monospace' }}>
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: `${s(10, 4)}px`,
+            textAlign: 'center',
+            color: '#805633',
+            fontSize: `${s(13, 9)}px`,
+            fontFamily: 'Share Tech Mono, monospace'
+          }}>
             [ 無執行中任務 ]
           </div>
         )}
@@ -267,8 +380,22 @@ export default function PipWindow({
           pipWindowRef.current = pipWin;
 
           const container = pipWin.document.createElement('div');
+          pipWin.document.documentElement.style.width = '100%';
+          pipWin.document.documentElement.style.height = '100%';
+          pipWin.document.documentElement.style.margin = '0';
+          pipWin.document.documentElement.style.padding = '0';
+          pipWin.document.documentElement.style.overflow = 'hidden';
+
+          pipWin.document.body.style.width = '100%';
+          pipWin.document.body.style.height = '100%';
           pipWin.document.body.style.margin = '0';
+          pipWin.document.body.style.padding = '0';
+          pipWin.document.body.style.overflow = 'hidden';
           pipWin.document.body.style.background = '#040303';
+
+          container.style.width = '100%';
+          container.style.height = '100%';
+          container.style.boxSizing = 'border-box';
           pipWin.document.body.appendChild(container);
 
           // Copy current document styles to PIP window
