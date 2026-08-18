@@ -1,5 +1,73 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+
+function AutoFitText({
+  text,
+  maxFontSize = 16,
+  minFontSize = 7,
+  windowSize,
+  maxLines = null,
+  singleLine = false,
+  style = {},
+  className = '',
+  as = 'div'
+}) {
+  const containerRef = useRef(null);
+  const [computedFontSize, setComputedFontSize] = useState(maxFontSize);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el || !text) return;
+
+    let low = minFontSize;
+    let high = maxFontSize;
+    let best = minFontSize;
+
+    // Binary search for optimal font size that avoids overflow in both width and height
+    for (let i = 0; i < 7; i++) {
+      const mid = Math.round(((low + high) / 2) * 10) / 10;
+      el.style.fontSize = `${mid}px`;
+
+      const fitsW = el.scrollWidth <= el.clientWidth + 1;
+      const fitsH = el.scrollHeight <= el.clientHeight + 1;
+
+      if (fitsW && fitsH) {
+        best = mid;
+        low = mid + 0.3;
+      } else {
+        high = mid - 0.3;
+      }
+    }
+
+    el.style.fontSize = `${best}px`;
+    setComputedFontSize(best);
+  }, [text, maxFontSize, minFontSize, windowSize?.width, windowSize?.height, maxLines, singleLine]);
+
+  const Component = as;
+
+  return (
+    <Component
+      ref={containerRef}
+      className={className}
+      style={{
+        display: maxLines ? '-webkit-box' : 'block',
+        WebkitLineClamp: maxLines || undefined,
+        WebkitBoxOrient: maxLines ? 'vertical' : undefined,
+        whiteSpace: singleLine ? 'nowrap' : 'normal',
+        overflow: 'hidden',
+        wordBreak: 'break-word',
+        lineHeight: 1.2,
+        width: '100%',
+        height: '100%',
+        boxSizing: 'border-box',
+        fontSize: `${computedFontSize}px`,
+        ...style
+      }}
+    >
+      {text}
+    </Component>
+  );
+}
 
 function PipContent({
   globalSeconds,
@@ -44,7 +112,6 @@ function PipContent({
 
   // Sizing helper based on scaling factor
   const s = (base, min = 0) => Math.max(min, Math.round(base * effectiveScale));
-  const isTight = size.height < 210 || size.width < 340;
 
   return (
     <div
@@ -74,7 +141,7 @@ function PipContent({
         gap: `${s(6, 2)}px`,
         flexShrink: 0
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: `${s(6, 2)}px`, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: `${s(6, 2)}px`, minWidth: 0, flex: 1 }}>
           <img
             src="./icon.png"
             alt="WRO"
@@ -93,7 +160,8 @@ function PipContent({
             letterSpacing: '1px',
             fontFamily: 'Orbitron, sans-serif',
             fontWeight: 800,
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            flexShrink: 0
           }}>
             [ WRO HUD ]
           </span>
@@ -109,7 +177,8 @@ function PipContent({
               cursor: 'pointer',
               fontFamily: 'Orbitron, sans-serif',
               letterSpacing: '0.5px',
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
             {isRunning ? '⏸ 暫停' : '▶ 開始'}
@@ -157,12 +226,13 @@ function PipContent({
               background: 'rgba(20, 10, 5, 0.95)',
               border: '1px solid #ff5500',
               boxShadow: '0 0 15px rgba(255, 85, 0, 0.3)',
-              padding: `${s(10, 4)}px`,
+              padding: `${s(8, 4)}px`,
               flex: activeNodes.length > 1 ? `0 0 ${s(260, 140)}px` : '1',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
               minHeight: 0,
+              minWidth: 0,
               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
             }}>
               <div style={{
@@ -171,43 +241,73 @@ function PipContent({
                 alignItems: 'center',
                 gap: `${s(8, 4)}px`,
                 flex: 1,
-                minHeight: 0
+                minHeight: 0,
+                minWidth: 0
               }}>
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{
+                  flex: 1,
+                  minWidth: 0,
+                  minHeight: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  height: '100%'
+                }}>
                   <div style={{
                     fontSize: `${s(10, 7)}px`,
                     color: '#ffaa00',
                     fontWeight: 700,
                     marginBottom: `${s(2, 1)}px`,
                     fontFamily: 'Orbitron, sans-serif',
-                    letterSpacing: '1px'
+                    letterSpacing: '1px',
+                    flexShrink: 0
                   }}>
                     [ 當前執行任務 ]
                   </div>
+
+                  {/* Auto-fit Task Name */}
                   <div style={{
-                    fontSize: `${s(15, 9)}px`,
-                    fontWeight: 800,
-                    marginBottom: `${s(3, 1)}px`,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    color: '#fff'
+                    flexShrink: 0,
+                    width: '100%',
+                    maxHeight: `${s(40, 18)}px`,
+                    minHeight: `${s(16, 12)}px`,
+                    overflow: 'hidden'
                   }}>
-                    {node.name}
+                    <AutoFitText
+                      text={node.name}
+                      maxFontSize={s(16, 10)}
+                      minFontSize={s(8, 6)}
+                      windowSize={size}
+                      maxLines={2}
+                      style={{
+                        fontWeight: 800,
+                        color: '#fff',
+                        fontFamily: "'Chakra Petch', 'Zen Old Mincho', 'Noto Sans TC', sans-serif"
+                      }}
+                    />
                   </div>
-                  {node.description && !isTight && (
+
+                  {/* Auto-fit Task Description */}
+                  {node.description && (
                     <div style={{
-                      fontSize: `${s(11, 7)}px`,
-                      color: '#d99b6c',
-                      borderLeft: '2px solid #ff5500',
-                      paddingLeft: `${s(6, 2)}px`,
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                      maxHeight: `${s(36, 14)}px`,
-                      overflowY: 'auto',
-                      lineHeight: 1.2
+                      flex: 1,
+                      minHeight: 0,
+                      width: '100%',
+                      marginTop: `${s(2, 1)}px`,
+                      overflow: 'hidden'
                     }}>
-                      {node.description}
+                      <AutoFitText
+                        text={node.description}
+                        maxFontSize={s(11, 8)}
+                        minFontSize={s(7, 5)}
+                        windowSize={size}
+                        style={{
+                          color: '#d99b6c',
+                          borderLeft: '2px solid #ff5500',
+                          paddingLeft: `${s(4, 2)}px`,
+                          fontFamily: "'Chakra Petch', 'Zen Old Mincho', 'Noto Sans TC', sans-serif"
+                        }}
+                      />
                     </div>
                   )}
                 </div>
@@ -249,49 +349,62 @@ function PipContent({
                 display: 'flex',
                 gap: `${s(6, 3)}px`,
                 marginTop: `${s(6, 2)}px`,
-                flexShrink: 0
+                flexShrink: 0,
+                minWidth: 0
               }}>
                 <button
                   style={{
                     flex: 1,
+                    minWidth: 0,
                     background: 'rgba(0, 255, 102, 0.2)',
                     border: '1px solid #00ff66',
                     color: '#00ff66',
-                    padding: `${s(6, 2)}px ${s(6, 2)}px`,
+                    padding: `${s(5, 2)}px ${s(4, 2)}px`,
                     fontWeight: 700,
                     cursor: 'pointer',
-                    fontSize: `${s(11, 7)}px`,
                     fontFamily: 'Orbitron, sans-serif',
-                    letterSpacing: '0.5px',
-                    whiteSpace: 'nowrap'
+                    letterSpacing: '0.5px'
                   }}
                   onClick={() => {
                     const remSec = taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60;
                     onCompleteSuccess(node.id, remSec);
                   }}
                 >
-                  [ 達成主線 (成功) ]
+                  <AutoFitText
+                    text="[ 達成主線 (成功) ]"
+                    maxFontSize={s(11, 8)}
+                    minFontSize={s(7, 5)}
+                    windowSize={size}
+                    singleLine={true}
+                    style={{ textAlign: 'center' }}
+                  />
                 </button>
                 <button
                   style={{
                     flex: 1,
+                    minWidth: 0,
                     background: 'rgba(255, 0, 51, 0.2)',
                     border: '1px solid #ff0033',
                     color: '#ff0033',
-                    padding: `${s(6, 2)}px ${s(6, 2)}px`,
+                    padding: `${s(5, 2)}px ${s(4, 2)}px`,
                     fontWeight: 700,
                     cursor: 'pointer',
-                    fontSize: `${s(11, 7)}px`,
                     fontFamily: 'Orbitron, sans-serif',
-                    letterSpacing: '0.5px',
-                    whiteSpace: 'nowrap'
+                    letterSpacing: '0.5px'
                   }}
                   onClick={() => {
                     const remSec = taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60;
                     onCompleteFail(node.id, remSec);
                   }}
                 >
-                  [ 執行備援 (失敗) ]
+                  <AutoFitText
+                    text="[ 執行備援 (失敗) ]"
+                    maxFontSize={s(11, 8)}
+                    minFontSize={s(7, 5)}
+                    windowSize={size}
+                    singleLine={true}
+                    style={{ textAlign: 'center' }}
+                  />
                 </button>
               </div>
             </div>
