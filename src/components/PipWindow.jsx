@@ -1,73 +1,5 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-
-function AutoFitText({
-  text,
-  maxFontSize = 16,
-  minFontSize = 7,
-  windowSize,
-  maxLines = null,
-  singleLine = false,
-  style = {},
-  className = '',
-  as = 'div'
-}) {
-  const containerRef = useRef(null);
-  const [computedFontSize, setComputedFontSize] = useState(maxFontSize);
-
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el || !text) return;
-
-    let low = minFontSize;
-    let high = maxFontSize;
-    let best = minFontSize;
-
-    // Binary search for optimal font size that avoids overflow in both width and height
-    for (let i = 0; i < 7; i++) {
-      const mid = Math.round(((low + high) / 2) * 10) / 10;
-      el.style.fontSize = `${mid}px`;
-
-      const fitsW = el.scrollWidth <= el.clientWidth + 1;
-      const fitsH = el.scrollHeight <= el.clientHeight + 1;
-
-      if (fitsW && fitsH) {
-        best = mid;
-        low = mid + 0.3;
-      } else {
-        high = mid - 0.3;
-      }
-    }
-
-    el.style.fontSize = `${best}px`;
-    setComputedFontSize(best);
-  }, [text, maxFontSize, minFontSize, windowSize?.width, windowSize?.height, maxLines, singleLine]);
-
-  const Component = as;
-
-  return (
-    <Component
-      ref={containerRef}
-      className={className}
-      style={{
-        display: maxLines ? '-webkit-box' : 'block',
-        WebkitLineClamp: maxLines || undefined,
-        WebkitBoxOrient: maxLines ? 'vertical' : undefined,
-        whiteSpace: singleLine ? 'nowrap' : 'normal',
-        overflow: 'hidden',
-        wordBreak: 'break-word',
-        lineHeight: 1.2,
-        width: '100%',
-        height: '100%',
-        boxSizing: 'border-box',
-        fontSize: `${computedFontSize}px`,
-        ...style
-      }}
-    >
-      {text}
-    </Component>
-  );
-}
 
 function PipContent({
   globalSeconds,
@@ -104,20 +36,45 @@ function PipContent({
     return `${isNeg ? '-' : ''}${pad(m)}:${pad(s)}`;
   };
 
-  // Base reference window dimensions: 480 x 270
-  const scaleW = size.width / 480;
-  const scaleH = size.height / 270;
-  const scale = Math.min(scaleW, scaleH);
-  const effectiveScale = Math.max(0.4, Math.min(scale, 2.5));
+  const taskCount = activeNodes.length;
+  const isMultiTask = taskCount > 1;
 
-  // Sizing helper based on scaling factor
-  const s = (base, min = 0) => Math.max(min, Math.round(base * effectiveScale));
+  // Window aspect ratio determines whether multiple tasks are placed side-by-side or stacked
+  // Wide window (aspect ratio >= 1.25) -> row layout; Square / tall window -> column layout
+  const isRowLayout = isMultiTask ? (size.width / size.height >= 1.25) : false;
+
+  // Global header scaling
+  const headerScale = Math.max(0.65, Math.min(size.width / 420, size.height / 260, 2.0));
+  const hs = (base, min = 0) => Math.max(min, Math.round(base * headerScale));
+
+  // Compute available space per task card
+  const headerHeightApprox = hs(42, 32);
+  const containerPadding = Math.max(6, Math.round(10 * headerScale));
+  const cardGap = Math.max(6, Math.round(8 * headerScale));
+
+  const availableWidth = size.width - (containerPadding * 2);
+  const availableHeight = size.height - (containerPadding * 2) - headerHeightApprox - cardGap;
+
+  const cardWidth = isMultiTask
+    ? (isRowLayout ? (availableWidth - (cardGap * (taskCount - 1))) / taskCount : availableWidth)
+    : availableWidth;
+
+  const cardHeight = isMultiTask
+    ? (isRowLayout ? availableHeight : (availableHeight - (cardGap * (taskCount - 1))) / taskCount)
+    : availableHeight;
+
+  // Card internal scaling factor based on actual card dimensions
+  const cardScale = Math.max(0.65, Math.min(cardWidth / 250, cardHeight / 130, 2.0));
+  const cs = (base, min = 0) => Math.max(min, Math.round(base * cardScale));
+
+  // Decide if card internal elements should use stacked or horizontal layout
+  const isCardNarrow = cardWidth < 220;
 
   return (
     <div
       ref={containerRef}
       style={{
-        padding: `${s(10, 4)}px`,
+        padding: `${containerPadding}px`,
         color: '#fff3e6',
         fontFamily: "'Chakra Petch', 'Zen Old Mincho', 'Noto Sans TC', sans-serif",
         background: '#040303',
@@ -127,7 +84,7 @@ function PipContent({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        gap: `${s(6, 2)}px`,
+        gap: `${cardGap}px`,
         overflow: 'hidden'
       }}
     >
@@ -137,24 +94,24 @@ function PipContent({
         justifyContent: 'space-between',
         alignItems: 'center',
         borderBottom: '1px solid rgba(255,102,0,0.35)',
-        paddingBottom: `${s(6, 2)}px`,
-        gap: `${s(6, 2)}px`,
+        paddingBottom: `${hs(6, 3)}px`,
+        gap: `${hs(6, 3)}px`,
         flexShrink: 0
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: `${s(6, 2)}px`, minWidth: 0, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: `${hs(6, 3)}px`, minWidth: 0 }}>
           <img
             src="./icon.png"
             alt="WRO"
             style={{
-              width: `${s(18, 12)}px`,
-              height: `${s(18, 12)}px`,
+              width: `${hs(18, 12)}px`,
+              height: `${hs(18, 12)}px`,
               objectFit: 'contain',
               borderRadius: '3px',
               flexShrink: 0
             }}
           />
           <span style={{
-            fontSize: `${s(12, 8)}px`,
+            fontSize: `${hs(12, 9)}px`,
             color: '#ffaa00',
             textTransform: 'uppercase',
             letterSpacing: '1px',
@@ -171,8 +128,8 @@ function PipContent({
               background: isRunning ? 'rgba(255, 0, 51, 0.25)' : 'rgba(255, 170, 0, 0.25)',
               border: isRunning ? '1px solid #ff0033' : '1px solid #ffaa00',
               color: isRunning ? '#ff6677' : '#ffaa00',
-              padding: `${s(3, 1)}px ${s(8, 4)}px`,
-              fontSize: `${s(11, 8)}px`,
+              padding: `${hs(3, 2)}px ${hs(8, 4)}px`,
+              fontSize: `${hs(11, 8)}px`,
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'Orbitron, sans-serif',
@@ -185,9 +142,9 @@ function PipContent({
           </button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: `${s(6, 2)}px`, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: `${hs(6, 3)}px`, flexShrink: 0 }}>
           <span style={{
-            fontSize: `${s(11, 7)}px`,
+            fontSize: `${hs(11, 8)}px`,
             color: '#ffaa00',
             fontWeight: 700,
             letterSpacing: '1px',
@@ -197,7 +154,7 @@ function PipContent({
           </span>
           <span className="display-time" style={{
             fontFamily: 'var(--font-family-digital), DS-Digital, Share Tech Mono, monospace',
-            fontSize: `${s(30, 15)}px`,
+            fontSize: `${hs(28, 16)}px`,
             fontWeight: 700,
             letterSpacing: '1.5px',
             color: globalSeconds < 300 ? '#ff0033' : '#ffaa00',
@@ -209,216 +166,211 @@ function PipContent({
         </div>
       </div>
 
-      {/* Active Task Info */}
+      {/* Active Tasks Grid/Stack Area */}
       <div style={{
         flex: 1,
         minHeight: 0,
-        overflowX: activeNodes.length > 1 ? 'auto' : 'hidden',
-        overflowY: 'hidden',
+        minWidth: 0,
         display: 'flex',
-        flexDirection: 'row',
-        gap: `${s(8, 3)}px`,
-        alignItems: 'stretch'
+        flexDirection: isRowLayout ? 'row' : 'column',
+        gap: `${cardGap}px`,
+        alignItems: 'stretch',
+        overflow: 'hidden'
       }}>
-        {activeNodes.length > 0 ? (
-          activeNodes.map(node => (
-            <div key={node.id} style={{
-              background: 'rgba(20, 10, 5, 0.95)',
-              border: '1px solid #ff5500',
-              boxShadow: '0 0 15px rgba(255, 85, 0, 0.3)',
-              padding: `${s(8, 4)}px`,
-              flex: activeNodes.length > 1 ? `0 0 ${s(260, 140)}px` : '1',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              minHeight: 0,
-              minWidth: 0,
-              clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: `${s(8, 4)}px`,
-                flex: 1,
-                minHeight: 0,
-                minWidth: 0
-              }}>
-                <div style={{
-                  flex: 1,
-                  minWidth: 0,
+        {taskCount > 0 ? (
+          activeNodes.map(node => {
+            const nameLen = (node.name || '').length;
+            const taskTitleFontSize = nameLen > 12 ? cs(13, 9) : cs(15, 10);
+            const buttonFontSize = isCardNarrow ? cs(10, 8) : cs(11, 8);
+            const successBtnText = isCardNarrow ? '[ 達成主線 ]' : '[ 達成主線 (成功) ]';
+            const failBtnText = isCardNarrow ? '[ 執行備援 ]' : '[ 執行備援 (失敗) ]';
+
+            return (
+              <div
+                key={node.id}
+                style={{
+                  background: 'rgba(20, 10, 5, 0.95)',
+                  border: '1px solid #ff5500',
+                  boxShadow: '0 0 15px rgba(255, 85, 0, 0.3)',
+                  padding: `${cs(8, 4)}px`,
+                  flex: '1 1 0',
                   minHeight: 0,
+                  minWidth: 0,
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'center',
-                  height: '100%'
-                }}>
-                  <div style={{
-                    fontSize: `${s(10, 7)}px`,
-                    color: '#ffaa00',
-                    fontWeight: 700,
-                    marginBottom: `${s(2, 1)}px`,
-                    fontFamily: 'Orbitron, sans-serif',
-                    letterSpacing: '1px',
-                    flexShrink: 0
-                  }}>
-                    [ 當前執行任務 ]
-                  </div>
-
-                  {/* Auto-fit Task Name */}
-                  <div style={{
-                    flexShrink: 0,
-                    width: '100%',
-                    maxHeight: `${s(40, 18)}px`,
-                    minHeight: `${s(16, 12)}px`,
-                    overflow: 'hidden'
-                  }}>
-                    <AutoFitText
-                      text={node.name}
-                      maxFontSize={s(16, 10)}
-                      minFontSize={s(8, 6)}
-                      windowSize={size}
-                      maxLines={2}
-                      style={{
-                        fontWeight: 800,
-                        color: '#fff',
-                        fontFamily: "'Chakra Petch', 'Zen Old Mincho', 'Noto Sans TC', sans-serif"
-                      }}
-                    />
-                  </div>
-
-                  {/* Auto-fit Task Description */}
-                  {node.description && (
-                    <div style={{
-                      flex: 1,
-                      minHeight: 0,
-                      width: '100%',
-                      marginTop: `${s(2, 1)}px`,
-                      overflow: 'hidden'
-                    }}>
-                      <AutoFitText
-                        text={node.description}
-                        maxFontSize={s(11, 8)}
-                        minFontSize={s(7, 5)}
-                        windowSize={size}
-                        style={{
-                          color: '#d99b6c',
-                          borderLeft: '2px solid #ff5500',
-                          paddingLeft: `${s(4, 2)}px`,
-                          fontFamily: "'Chakra Petch', 'Zen Old Mincho', 'Noto Sans TC', sans-serif"
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Right side: Task Timer */}
+                  justifyContent: 'space-between',
+                  gap: `${cs(4, 2)}px`,
+                  clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))',
+                  boxSizing: 'border-box'
+                }}
+              >
+                {/* Main Content Area */}
                 <div style={{
                   display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-end',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  paddingLeft: `${s(6, 2)}px`
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: `${cs(8, 4)}px`,
+                  flex: 1,
+                  minHeight: 0,
+                  minWidth: 0
                 }}>
-                  <span style={{
-                    fontSize: `${s(11, 7)}px`,
-                    color: '#ffaa00',
-                    fontWeight: 700,
-                    letterSpacing: '1px',
-                    marginBottom: `${s(2, 1)}px`,
-                    whiteSpace: 'nowrap'
+                  {/* Left: Task Header & Name */}
+                  <div style={{
+                    flex: 1,
+                    minWidth: 0,
+                    minHeight: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center'
                   }}>
-                    任務剩餘時間
-                  </span>
-                  <div className="display-time" style={{
-                    fontSize: `${s(34, 16)}px`,
-                    fontFamily: 'var(--font-family-digital), DS-Digital, Share Tech Mono, monospace',
-                    fontWeight: 700,
-                    letterSpacing: '1.5px',
-                    color: (taskTimers[node.id] || 0) < 0 ? '#ff0033' : '#ffaa00',
-                    textShadow: (taskTimers[node.id] || 0) < 0 ? '0 0 15px rgba(255, 0, 51, 0.8)' : '0 0 15px rgba(255, 170, 0, 0.5)',
-                    lineHeight: 1
+                    <div style={{
+                      fontSize: `${cs(10, 7)}px`,
+                      color: '#ffaa00',
+                      fontWeight: 700,
+                      marginBottom: `${cs(2, 1)}px`,
+                      fontFamily: 'Orbitron, sans-serif',
+                      letterSpacing: '1px',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      [ 當前執行任務 ]
+                    </div>
+
+                    <div style={{
+                      fontSize: `${taskTitleFontSize}px`,
+                      fontWeight: 800,
+                      color: '#fff',
+                      lineHeight: 1.2,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word'
+                    }}>
+                      {node.name}
+                    </div>
+
+                    {node.description && cardHeight > 130 && (
+                      <div style={{
+                        fontSize: `${cs(10, 7)}px`,
+                        color: '#d99b6c',
+                        borderLeft: '2px solid #ff5500',
+                        paddingLeft: `${cs(4, 2)}px`,
+                        marginTop: `${cs(2, 1)}px`,
+                        lineHeight: 1.2,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        wordBreak: 'break-word'
+                      }}>
+                        {node.description}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right: Task Timer */}
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    paddingLeft: `${cs(6, 2)}px`
                   }}>
-                    {formatTime(taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60)}
+                    <span style={{
+                      fontSize: `${cs(10, 7)}px`,
+                      color: '#ffaa00',
+                      fontWeight: 700,
+                      letterSpacing: '1px',
+                      marginBottom: `${cs(2, 1)}px`,
+                      whiteSpace: 'nowrap'
+                    }}>
+                      任務剩餘時間
+                    </span>
+                    <div className="display-time" style={{
+                      fontSize: `${cs(30, 16)}px`,
+                      fontFamily: 'var(--font-family-digital), DS-Digital, Share Tech Mono, monospace',
+                      fontWeight: 700,
+                      letterSpacing: '1.5px',
+                      color: (taskTimers[node.id] || 0) < 0 ? '#ff0033' : '#ffaa00',
+                      textShadow: (taskTimers[node.id] || 0) < 0 ? '0 0 15px rgba(255, 0, 51, 0.8)' : '0 0 15px rgba(255, 170, 0, 0.5)',
+                      lineHeight: 1
+                    }}>
+                      {formatTime(taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60)}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div style={{
-                display: 'flex',
-                gap: `${s(6, 3)}px`,
-                marginTop: `${s(6, 2)}px`,
-                flexShrink: 0,
-                minWidth: 0
-              }}>
-                <button
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    background: 'rgba(0, 255, 102, 0.2)',
-                    border: '1px solid #00ff66',
-                    color: '#00ff66',
-                    padding: `${s(5, 2)}px ${s(4, 2)}px`,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontFamily: 'Orbitron, sans-serif',
-                    letterSpacing: '0.5px'
-                  }}
-                  onClick={() => {
-                    const remSec = taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60;
-                    onCompleteSuccess(node.id, remSec);
-                  }}
-                >
-                  <AutoFitText
-                    text="[ 達成主線 (成功) ]"
-                    maxFontSize={s(11, 8)}
-                    minFontSize={s(7, 5)}
-                    windowSize={size}
-                    singleLine={true}
-                    style={{ textAlign: 'center' }}
-                  />
-                </button>
-                <button
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    background: 'rgba(255, 0, 51, 0.2)',
-                    border: '1px solid #ff0033',
-                    color: '#ff0033',
-                    padding: `${s(5, 2)}px ${s(4, 2)}px`,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontFamily: 'Orbitron, sans-serif',
-                    letterSpacing: '0.5px'
-                  }}
-                  onClick={() => {
-                    const remSec = taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60;
-                    onCompleteFail(node.id, remSec);
-                  }}
-                >
-                  <AutoFitText
-                    text="[ 執行備援 (失敗) ]"
-                    maxFontSize={s(11, 8)}
-                    minFontSize={s(7, 5)}
-                    windowSize={size}
-                    singleLine={true}
-                    style={{ textAlign: 'center' }}
-                  />
-                </button>
+                {/* Bottom Action Buttons */}
+                <div style={{
+                  display: 'flex',
+                  gap: `${cs(6, 3)}px`,
+                  marginTop: `${cs(4, 2)}px`,
+                  flexShrink: 0,
+                  minWidth: 0
+                }}>
+                  <button
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      background: 'rgba(0, 255, 102, 0.2)',
+                      border: '1px solid #00ff66',
+                      color: '#00ff66',
+                      padding: `${cs(5, 2)}px ${cs(4, 2)}px`,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontSize: `${buttonFontSize}px`,
+                      fontFamily: 'Orbitron, sans-serif',
+                      letterSpacing: '0.5px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                    onClick={() => {
+                      const remSec = taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60;
+                      onCompleteSuccess(node.id, remSec);
+                    }}
+                  >
+                    {successBtnText}
+                  </button>
+                  <button
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      background: 'rgba(255, 0, 51, 0.2)',
+                      border: '1px solid #ff0033',
+                      color: '#ff0033',
+                      padding: `${cs(5, 2)}px ${cs(4, 2)}px`,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontSize: `${buttonFontSize}px`,
+                      fontFamily: 'Orbitron, sans-serif',
+                      letterSpacing: '0.5px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                    onClick={() => {
+                      const remSec = taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60;
+                      onCompleteFail(node.id, remSec);
+                    }}
+                  >
+                    {failBtnText}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div style={{
             flex: 1,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: `${s(10, 4)}px`,
+            padding: `${hs(10, 4)}px`,
             textAlign: 'center',
             color: '#805633',
-            fontSize: `${s(13, 9)}px`,
+            fontSize: `${hs(13, 9)}px`,
             fontFamily: 'Share Tech Mono, monospace'
           }}>
             [ 無執行中任務 ]
