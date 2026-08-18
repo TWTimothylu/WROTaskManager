@@ -39,42 +39,49 @@ function PipContent({
   const taskCount = activeNodes.length;
   const isMultiTask = taskCount > 1;
 
-  // Window aspect ratio determines whether multiple tasks are placed side-by-side or stacked
-  // Wide window (aspect ratio >= 1.25) -> row layout; Square / tall window -> column layout
+  // Layout orientation: if window is landscape (aspect >= 1.25) -> row; else -> column
   const isRowLayout = isMultiTask ? (size.width / size.height >= 1.25) : false;
 
-  // Global header scaling
-  const headerScale = Math.max(0.65, Math.min(size.width / 420, size.height / 260, 2.0));
-  const hs = (base, min = 0) => Math.max(min, Math.round(base * headerScale));
+  // Header scaling
+  const globalTimerFontSize = Math.max(16, Math.min(Math.round(size.height * 0.12), Math.round(size.width * 0.085), 44));
+  const headerBadgeFontSize = Math.max(9, Math.min(Math.round(size.height * 0.055), 14));
+  const buttonHeaderFontSize = Math.max(9, Math.min(Math.round(size.height * 0.05), 13));
 
-  // Compute available space per task card
-  const headerHeightApprox = hs(42, 32);
-  const containerPadding = Math.max(6, Math.round(10 * headerScale));
-  const cardGap = Math.max(6, Math.round(8 * headerScale));
+  const padding = Math.max(4, Math.round(size.height * 0.025));
+  const gap = Math.max(4, Math.round(size.height * 0.02));
 
-  const availableWidth = size.width - (containerPadding * 2);
-  const availableHeight = size.height - (containerPadding * 2) - headerHeightApprox - cardGap;
+  // Compute card dimensions
+  const headerHeight = Math.max(28, Math.round(size.height * 0.14));
+  const availableCardAreaHeight = size.height - (padding * 2) - headerHeight - gap;
+  const availableCardAreaWidth = size.width - (padding * 2);
 
   const cardWidth = isMultiTask
-    ? (isRowLayout ? (availableWidth - (cardGap * (taskCount - 1))) / taskCount : availableWidth)
-    : availableWidth;
+    ? (isRowLayout ? (availableCardAreaWidth - (gap * (taskCount - 1))) / taskCount : availableCardAreaWidth)
+    : availableCardAreaWidth;
 
   const cardHeight = isMultiTask
-    ? (isRowLayout ? availableHeight : (availableHeight - (cardGap * (taskCount - 1))) / taskCount)
-    : availableHeight;
+    ? (isRowLayout ? availableCardAreaHeight : (availableCardAreaHeight - (gap * (taskCount - 1))) / taskCount)
+    : availableCardAreaHeight;
 
-  // Card internal scaling factor based on actual card dimensions
-  const cardScale = Math.max(0.65, Math.min(cardWidth / 250, cardHeight / 130, 2.0));
-  const cs = (base, min = 0) => Math.max(min, Math.round(base * cardScale));
+  // Decide if the card is wide & short or tall/square
+  const isWideCard = (cardWidth / cardHeight) >= 2.1;
 
-  // Decide if card internal elements should use stacked or horizontal layout
-  const isCardNarrow = cardWidth < 220;
+  // Card typography scales dynamically with card width and height to fill the space
+  const taskTagFontSize = Math.max(8, Math.min(Math.round(cardHeight * 0.085), Math.round(cardWidth * 0.045), 13));
+  const taskTitleFontSize = Math.max(11, Math.min(Math.round(cardHeight * 0.14), Math.round(cardWidth * 0.075), 24));
+  const taskTimerFontSize = Math.max(20, Math.min(Math.round(cardHeight * 0.36), Math.round(cardWidth * 0.22), 68));
+  const taskTimerLabelFontSize = Math.max(8, Math.min(Math.round(cardHeight * 0.075), Math.round(cardWidth * 0.04), 13));
+  const actionButtonFontSize = Math.max(9, Math.min(Math.round(cardHeight * 0.11), Math.round(cardWidth * 0.05), 16));
+  const actionButtonHeight = Math.max(24, Math.min(Math.round(cardHeight * 0.26), 48));
+
+  const successBtnText = cardWidth < 210 ? '[ 達成主線 ]' : '[ 達成主線 (成功) ]';
+  const failBtnText = cardWidth < 210 ? '[ 執行備援 ]' : '[ 執行備援 (失敗) ]';
 
   return (
     <div
       ref={containerRef}
       style={{
-        padding: `${containerPadding}px`,
+        padding: `${padding}px`,
         color: '#fff3e6',
         fontFamily: "'Chakra Petch', 'Zen Old Mincho', 'Noto Sans TC', sans-serif",
         background: '#040303',
@@ -84,34 +91,36 @@ function PipContent({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        gap: `${cardGap}px`,
+        gap: `${gap}px`,
         overflow: 'hidden'
       }}
     >
       {/* Header with Play/Pause and Global Timer */}
       <div style={{
+        height: `${headerHeight}px`,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         borderBottom: '1px solid rgba(255,102,0,0.35)',
-        paddingBottom: `${hs(6, 3)}px`,
-        gap: `${hs(6, 3)}px`,
-        flexShrink: 0
+        paddingBottom: `${Math.max(2, Math.round(padding * 0.5))}px`,
+        gap: `${gap}px`,
+        flexShrink: 0,
+        boxSizing: 'border-box'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: `${hs(6, 3)}px`, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: `${gap}px`, minWidth: 0 }}>
           <img
             src="./icon.png"
             alt="WRO"
             style={{
-              width: `${hs(18, 12)}px`,
-              height: `${hs(18, 12)}px`,
+              width: `${Math.max(12, Math.round(headerBadgeFontSize * 1.5))}px`,
+              height: `${Math.max(12, Math.round(headerBadgeFontSize * 1.5))}px`,
               objectFit: 'contain',
               borderRadius: '3px',
               flexShrink: 0
             }}
           />
           <span style={{
-            fontSize: `${hs(12, 9)}px`,
+            fontSize: `${headerBadgeFontSize}px`,
             color: '#ffaa00',
             textTransform: 'uppercase',
             letterSpacing: '1px',
@@ -128,8 +137,8 @@ function PipContent({
               background: isRunning ? 'rgba(255, 0, 51, 0.25)' : 'rgba(255, 170, 0, 0.25)',
               border: isRunning ? '1px solid #ff0033' : '1px solid #ffaa00',
               color: isRunning ? '#ff6677' : '#ffaa00',
-              padding: `${hs(3, 2)}px ${hs(8, 4)}px`,
-              fontSize: `${hs(11, 8)}px`,
+              padding: `${Math.max(2, Math.round(padding * 0.4))}px ${Math.max(4, Math.round(padding * 0.8))}px`,
+              fontSize: `${buttonHeaderFontSize}px`,
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'Orbitron, sans-serif',
@@ -142,9 +151,9 @@ function PipContent({
           </button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: `${hs(6, 3)}px`, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: `${gap}px`, flexShrink: 0 }}>
           <span style={{
-            fontSize: `${hs(11, 8)}px`,
+            fontSize: `${headerBadgeFontSize}px`,
             color: '#ffaa00',
             fontWeight: 700,
             letterSpacing: '1px',
@@ -154,7 +163,7 @@ function PipContent({
           </span>
           <span className="display-time" style={{
             fontFamily: 'var(--font-family-digital), DS-Digital, Share Tech Mono, monospace',
-            fontSize: `${hs(28, 16)}px`,
+            fontSize: `${globalTimerFontSize}px`,
             fontWeight: 700,
             letterSpacing: '1.5px',
             color: globalSeconds < 300 ? '#ff0033' : '#ffaa00',
@@ -166,25 +175,19 @@ function PipContent({
         </div>
       </div>
 
-      {/* Active Tasks Grid/Stack Area */}
+      {/* Active Tasks Grid/Stack Area - Fills 100% Remaining Height & Width */}
       <div style={{
         flex: 1,
         minHeight: 0,
         minWidth: 0,
         display: 'flex',
         flexDirection: isRowLayout ? 'row' : 'column',
-        gap: `${cardGap}px`,
+        gap: `${gap}px`,
         alignItems: 'stretch',
         overflow: 'hidden'
       }}>
         {taskCount > 0 ? (
           activeNodes.map(node => {
-            const nameLen = (node.name || '').length;
-            const taskTitleFontSize = nameLen > 12 ? cs(13, 9) : cs(15, 10);
-            const buttonFontSize = isCardNarrow ? cs(10, 8) : cs(11, 8);
-            const successBtnText = isCardNarrow ? '[ 達成主線 ]' : '[ 達成主線 (成功) ]';
-            const failBtnText = isCardNarrow ? '[ 執行備援 ]' : '[ 執行備援 (失敗) ]';
-
             return (
               <div
                 key={node.id}
@@ -192,70 +195,44 @@ function PipContent({
                   background: 'rgba(20, 10, 5, 0.95)',
                   border: '1px solid #ff5500',
                   boxShadow: '0 0 15px rgba(255, 85, 0, 0.3)',
-                  padding: `${cs(8, 4)}px`,
+                  padding: `${Math.max(4, Math.round(cardHeight * 0.04))}px ${Math.max(6, Math.round(cardWidth * 0.03))}px`,
                   flex: '1 1 0',
                   minHeight: 0,
                   minWidth: 0,
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  gap: `${cs(4, 2)}px`,
+                  gap: `${Math.max(2, Math.round(cardHeight * 0.02))}px`,
                   clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))',
                   boxSizing: 'border-box'
                 }}
               >
-                {/* Main Content Area */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: `${cs(8, 4)}px`,
-                  flex: 1,
-                  minHeight: 0,
-                  minWidth: 0
-                }}>
-                  {/* Left: Task Header & Name */}
+                {isWideCard ? (
+                  /* Wide Card Layout (Horizontal Split) */
                   <div style={{
-                    flex: 1,
-                    minWidth: 0,
-                    minHeight: 0,
                     display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center'
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: `${gap}px`,
+                    flex: 1,
+                    minHeight: 0,
+                    minWidth: 0
                   }}>
-                    <div style={{
-                      fontSize: `${cs(10, 7)}px`,
-                      color: '#ffaa00',
-                      fontWeight: 700,
-                      marginBottom: `${cs(2, 1)}px`,
-                      fontFamily: 'Orbitron, sans-serif',
-                      letterSpacing: '1px',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      [ 當前執行任務 ]
-                    </div>
-
-                    <div style={{
-                      fontSize: `${taskTitleFontSize}px`,
-                      fontWeight: 800,
-                      color: '#fff',
-                      lineHeight: 1.2,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      wordBreak: 'break-word'
-                    }}>
-                      {node.name}
-                    </div>
-
-                    {node.description && cardHeight > 130 && (
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                       <div style={{
-                        fontSize: `${cs(10, 7)}px`,
-                        color: '#d99b6c',
-                        borderLeft: '2px solid #ff5500',
-                        paddingLeft: `${cs(4, 2)}px`,
-                        marginTop: `${cs(2, 1)}px`,
+                        fontSize: `${taskTagFontSize}px`,
+                        color: '#ffaa00',
+                        fontWeight: 700,
+                        fontFamily: 'Orbitron, sans-serif',
+                        letterSpacing: '1px',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        [ 當前執行任務 ]
+                      </div>
+                      <div style={{
+                        fontSize: `${taskTitleFontSize}px`,
+                        fontWeight: 800,
+                        color: '#fff',
                         lineHeight: 1.2,
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
@@ -263,68 +240,156 @@ function PipContent({
                         overflow: 'hidden',
                         wordBreak: 'break-word'
                       }}>
-                        {node.description}
+                        {node.name}
                       </div>
-                    )}
-                  </div>
+                      {node.description && cardHeight > 140 && (
+                        <div style={{
+                          fontSize: `${Math.max(8, taskTagFontSize)}px`,
+                          color: '#d99b6c',
+                          borderLeft: '2px solid #ff5500',
+                          paddingLeft: '4px',
+                          marginTop: '2px',
+                          lineHeight: 1.2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {node.description}
+                        </div>
+                      )}
+                    </div>
 
-                  {/* Right: Task Timer */}
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-end',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    paddingLeft: `${cs(6, 2)}px`
-                  }}>
-                    <span style={{
-                      fontSize: `${cs(10, 7)}px`,
-                      color: '#ffaa00',
-                      fontWeight: 700,
-                      letterSpacing: '1px',
-                      marginBottom: `${cs(2, 1)}px`,
-                      whiteSpace: 'nowrap'
-                    }}>
-                      任務剩餘時間
-                    </span>
-                    <div className="display-time" style={{
-                      fontSize: `${cs(30, 16)}px`,
-                      fontFamily: 'var(--font-family-digital), DS-Digital, Share Tech Mono, monospace',
-                      fontWeight: 700,
-                      letterSpacing: '1.5px',
-                      color: (taskTimers[node.id] || 0) < 0 ? '#ff0033' : '#ffaa00',
-                      textShadow: (taskTimers[node.id] || 0) < 0 ? '0 0 15px rgba(255, 0, 51, 0.8)' : '0 0 15px rgba(255, 170, 0, 0.5)',
-                      lineHeight: 1
-                    }}>
-                      {formatTime(taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60)}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{
+                        fontSize: `${taskTimerLabelFontSize}px`,
+                        color: '#ffaa00',
+                        fontWeight: 700,
+                        letterSpacing: '1px',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        任務剩餘時間
+                      </span>
+                      <div className="display-time" style={{
+                        fontSize: `${taskTimerFontSize}px`,
+                        fontFamily: 'var(--font-family-digital), DS-Digital, Share Tech Mono, monospace',
+                        fontWeight: 700,
+                        letterSpacing: '1.5px',
+                        color: (taskTimers[node.id] || 0) < 0 ? '#ff0033' : '#ffaa00',
+                        textShadow: (taskTimers[node.id] || 0) < 0 ? '0 0 15px rgba(255, 0, 51, 0.8)' : '0 0 15px rgba(255, 170, 0, 0.5)',
+                        lineHeight: 1
+                      }}>
+                        {formatTime(taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60)}
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  /* Standard / Tall Card Layout (Stacked 3-Tier Space Filling) */
+                  <>
+                    {/* Tier 1: Task Header & Name */}
+                    <div style={{ flexShrink: 0, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: `${taskTagFontSize}px`,
+                        color: '#ffaa00',
+                        fontWeight: 700,
+                        fontFamily: 'Orbitron, sans-serif',
+                        letterSpacing: '1px',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        [ 當前執行任務 ]
+                      </div>
+                      <div style={{
+                        fontSize: `${taskTitleFontSize}px`,
+                        fontWeight: 800,
+                        color: '#fff',
+                        lineHeight: 1.2,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        wordBreak: 'break-word'
+                      }}>
+                        {node.name}
+                      </div>
+                      {node.description && cardHeight > 160 && (
+                        <div style={{
+                          fontSize: `${Math.max(8, taskTagFontSize)}px`,
+                          color: '#d99b6c',
+                          borderLeft: '2px solid #ff5500',
+                          paddingLeft: '4px',
+                          marginTop: '2px',
+                          lineHeight: 1.2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {node.description}
+                        </div>
+                      )}
+                    </div>
 
-                {/* Bottom Action Buttons */}
+                    {/* Tier 2: Big Countdown Timer Centered / Expanded */}
+                    <div style={{
+                      flex: 1,
+                      minHeight: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '4px',
+                      padding: '2px 0'
+                    }}>
+                      <span style={{
+                        fontSize: `${taskTimerLabelFontSize}px`,
+                        color: '#ffaa00',
+                        fontWeight: 700,
+                        letterSpacing: '1px',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        任務剩餘
+                      </span>
+                      <div className="display-time" style={{
+                        fontSize: `${taskTimerFontSize}px`,
+                        fontFamily: 'var(--font-family-digital), DS-Digital, Share Tech Mono, monospace',
+                        fontWeight: 700,
+                        letterSpacing: '1.5px',
+                        color: (taskTimers[node.id] || 0) < 0 ? '#ff0033' : '#ffaa00',
+                        textShadow: (taskTimers[node.id] || 0) < 0 ? '0 0 15px rgba(255, 0, 51, 0.8)' : '0 0 15px rgba(255, 170, 0, 0.5)',
+                        lineHeight: 1
+                      }}>
+                        {formatTime(taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60)}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Tier 3: Action Buttons (Fixed / Flex height filling the bottom) */}
                 <div style={{
+                  height: `${actionButtonHeight}px`,
                   display: 'flex',
-                  gap: `${cs(6, 3)}px`,
-                  marginTop: `${cs(4, 2)}px`,
+                  gap: `${gap}px`,
                   flexShrink: 0,
                   minWidth: 0
                 }}>
                   <button
                     style={{
                       flex: 1,
+                      height: '100%',
                       minWidth: 0,
                       background: 'rgba(0, 255, 102, 0.2)',
                       border: '1px solid #00ff66',
                       color: '#00ff66',
-                      padding: `${cs(5, 2)}px ${cs(4, 2)}px`,
+                      padding: '0 4px',
                       fontWeight: 700,
                       cursor: 'pointer',
-                      fontSize: `${buttonFontSize}px`,
+                      fontSize: `${actionButtonFontSize}px`,
                       fontFamily: 'Orbitron, sans-serif',
                       letterSpacing: '0.5px',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                      textOverflow: 'ellipsis',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxSizing: 'border-box'
                     }}
                     onClick={() => {
                       const remSec = taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60;
@@ -336,19 +401,24 @@ function PipContent({
                   <button
                     style={{
                       flex: 1,
+                      height: '100%',
                       minWidth: 0,
                       background: 'rgba(255, 0, 51, 0.2)',
                       border: '1px solid #ff0033',
                       color: '#ff0033',
-                      padding: `${cs(5, 2)}px ${cs(4, 2)}px`,
+                      padding: '0 4px',
                       fontWeight: 700,
                       cursor: 'pointer',
-                      fontSize: `${buttonFontSize}px`,
+                      fontSize: `${actionButtonFontSize}px`,
                       fontFamily: 'Orbitron, sans-serif',
                       letterSpacing: '0.5px',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                      textOverflow: 'ellipsis',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxSizing: 'border-box'
                     }}
                     onClick={() => {
                       const remSec = taskTimers[node.id] !== undefined ? taskTimers[node.id] : node.allocatedMinutes * 60;
@@ -367,10 +437,10 @@ function PipContent({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: `${hs(10, 4)}px`,
+            padding: `${padding}px`,
             textAlign: 'center',
             color: '#805633',
-            fontSize: `${hs(13, 9)}px`,
+            fontSize: `${headerBadgeFontSize * 1.2}px`,
             fontFamily: 'Share Tech Mono, monospace'
           }}>
             [ 無執行中任務 ]
